@@ -10,6 +10,7 @@ class AppIconsConfig(CustomBaseModel):
     hide_label: bool = False
     hide_duplicates: bool = False
     hide_floating: bool = False
+    hide_when_focused: bool = False
 
 
 class GlazewmWorkspacesConfig(CustomBaseModel):

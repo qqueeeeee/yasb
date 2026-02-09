@@ -171,15 +171,24 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.workspace_window_count = 0
         self.windows = windows
 
+        # Create the layout for this button
         self.button_layout = QHBoxLayout(self)
         self.button_layout.setContentsMargins(0, 0, 0, 0)
-        self.button_layout.setSpacing(0)
+        self.button_layout.setSpacing(4)
 
-        self.text_label = QLabel(self.workspace_name)
-        self.text_label.setProperty("class", "label")
-        self.text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.button_layout.addWidget(self.text_label)
-        add_shadow(self.text_label, self.config.label_shadow.model_dump())
+        # Workspace number
+        self.number_widget = QLabel(self.workspace_name)
+        self.number_widget.setProperty("class", "ws-number")
+        add_shadow(self.number_widget, self.config.label_shadow.model_dump())
+        self.button_layout.addWidget(self.number_widget)
+
+        # Icons container
+        self.icons_container = QWidget()
+        self.icons_layout = QHBoxLayout(self.icons_container)
+        self.icons_layout.setContentsMargins(0, 0, 0, 0)
+        self.icons_layout.setSpacing(4)
+        self.icons_container.setProperty("class", "ws-icons")
+        self.button_layout.addWidget(self.icons_container)
 
         self.icons = {}
         self.icon_labels = []
@@ -200,7 +209,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         self.setProperty("class", button_class)
         refresh_widget_style(self)
         # Even though the label class name, we still need to run this on the label to catch any different stylings we want to do when the status changes
-        refresh_widget_style(self.text_label)
+        refresh_widget_style(self.number_widget)
 
     def _update_label(self):
         replacements = {
@@ -228,22 +237,22 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         focused_populated_label = focused_populated_label.format_map(replacements)
         focused_empty_label = focused_empty_label.format_map(replacements)
         if self.status == WorkspaceStatus.FOCUSED_POPULATED:
-            self.text_label.setText(focused_populated_label)
+            self.number_widget.setText(focused_populated_label)
             self.setHidden(False)
         elif self.status == WorkspaceStatus.FOCUSED_EMPTY:
-            self.text_label.setText(focused_empty_label)
+            self.number_widget.setText(focused_empty_label)
             self.setHidden(False)
         elif self.status == WorkspaceStatus.ACTIVE_POPULATED:
-            self.text_label.setText(active_populated_label)
+            self.number_widget.setText(active_populated_label)
             self.setHidden(False)
         elif self.status == WorkspaceStatus.ACTIVE_EMPTY:
-            self.text_label.setText(active_empty_label)
+            self.number_widget.setText(active_empty_label)
             self.setHidden(False)
         elif self.status == WorkspaceStatus.POPULATED:
-            self.text_label.setText(populated_label)
+            self.number_widget.setText(populated_label)
             self.setHidden(False)
         elif self.status == WorkspaceStatus.EMPTY:
-            self.text_label.setText(empty_label)
+            self.number_widget.setText(empty_label)
         else:
             logger.warning(f"Unknown workspace status: {self.status}")
 
@@ -320,13 +329,19 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
 
         except Exception:
             if DEBUG:
-                logging.exception(f"Failed to get icons for window with HWND {hwnd}")
+                logger.exception(f"Failed to get icons for window with HWND {hwnd}")
             return None
 
     def _update_icons(self):
         self.icons = self._get_all_icons_in_workspace()
 
-        if not self.config.app_icons.enabled_active and self.status == WorkspaceStatus.ACTIVE_POPULATED:
+        # HIDE ICONS WHEN FOCUSED - This is the key logic
+        if (
+            self.config.app_icons.hide_when_focused
+            and self.status in (WorkspaceStatus.FOCUSED_EMPTY, WorkspaceStatus.FOCUSED_POPULATED)
+        ):
+            icons_list = []
+        elif not self.config.app_icons.enabled_active and self.status == WorkspaceStatus.ACTIVE_POPULATED:
             icons_list = []
         elif (
             (not self.config.app_icons.enabled_active and self.config.app_icons.enabled_focused is None)
@@ -343,7 +358,7 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
         prev_icon_count = len(self.icon_labels)
         # Remove extra QLabel widgets if there are more than needed
         for extra_label in self.icon_labels[len(icons_list) :]:
-            self.button_layout.removeWidget(extra_label)
+            self.icons_layout.removeWidget(extra_label)
             extra_label.setParent(None)
         self.icon_labels = self.icon_labels[: len(icons_list)]
 
@@ -355,16 +370,22 @@ class GlazewmWorkspaceButtonWithIcons(QFrame):
                 icon_label = QLabel()
                 icon_label.setProperty("class", f"icon icon-{index + 1}")
                 icon_label.setPixmap(icon)
-                self.button_layout.addWidget(icon_label)
+                self.icons_layout.addWidget(icon_label)
                 add_shadow(icon_label, self.config.label_shadow.model_dump())
                 self.icon_labels.append(icon_label)
 
         curr_icon_count = len(icons_list)
 
-        if self.config.app_icons.hide_label and len(self.icon_labels) > 0:
-            self.text_label.hide()
+        # Hide icons container if no icons
+        if curr_icon_count == 0:
+            self.icons_container.setVisible(False)
         else:
-            self.text_label.show()
+            self.icons_container.setVisible(True)
+
+        if self.config.app_icons.hide_label and len(self.icon_labels) > 0:
+            self.number_widget.hide()
+        else:
+            self.number_widget.show()
 
         if curr_icon_count < prev_icon_count:
             if self.config.animation and self._animation_initialized:
