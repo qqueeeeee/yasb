@@ -5,8 +5,10 @@ from typing import Any, Callable, Union
 
 from pydantic import BaseModel
 from PyQt6.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt6.QtGui import QMouseEvent
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QWidget
+from PyQt6.QtGui import QMouseEvent, QPixmap
+from PyQt6.QtWidgets import QFrame, QHBoxLayout, QWidget, QSizePolicy
+
+from pathlib import Path
 
 from core.event_service import EventService
 from core.utils.win32.system_function import function_map
@@ -134,3 +136,32 @@ class BaseWidget(QWidget):
 
     def _cb_do_nothing(self):
         pass
+
+    def set_icon(self, label: QLabel, icon: str, size: int = 18):
+        """
+        Sets an icon on a QLabel.
+        - If `icon` is a valid file path → use image
+        - Else → fallback to text (font icon)
+        """
+        if not icon:
+            return
+    
+        path = Path(icon)
+    
+        if path.exists():
+            pixmap = QPixmap(str(path))
+            if pixmap.isNull():
+                return
+    
+            pixmap = pixmap.scaled(
+                size,
+                size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            label.setPixmap(pixmap)
+            label.setText("")
+        else:
+            label.setPixmap(QPixmap())
+            label.setText(icon)
+     

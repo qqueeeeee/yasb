@@ -297,7 +297,7 @@ class MediaWidget(BaseWidget):
                 prev_button = ClickableLabel(self)
                 prev_button.setProperty("class", "btn prev")
                 prev_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                prev_button.setText(self.config.media_menu_icons.prev_track)
+                self.set_icon(prev_button, self.config.media_menu_icons.prev_track, size=34)
                 prev_button.data = self.media.prev
                 self._popup_prev_label = prev_button
 
@@ -307,14 +307,14 @@ class MediaWidget(BaseWidget):
                 play_icon = (
                     self.config.media_menu_icons.pause if self._is_playing else self.config.media_menu_icons.play
                 )
-                play_button.setText(play_icon)
+                self.set_icon(play_button, play_icon, size=34)
                 play_button.data = self.media.play_pause
                 self._popup_play_button = play_button
 
                 next_button = ClickableLabel(self)
                 next_button.setProperty("class", "btn next")
                 next_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                next_button.setText(self.config.media_menu_icons.next_track)
+                self.set_icon(next_button, self.config.media_menu_icons.next_track, size=34)
                 next_button.data = self.media.next
                 self._popup_next_label = next_button
 
@@ -646,7 +646,7 @@ class MediaWidget(BaseWidget):
             active_label.setText("")
             if not self.config.controls_hide:
                 if self._play_label is not None:
-                    self._play_label.setText(self.config.icons.play)
+                    self.set_icon(self._play_label, self.config.icons.play, size=34)
                     self._play_label.setProperty("class", "btn play disabled")
                     refresh_widget_style(self._play_label)
 
@@ -678,7 +678,7 @@ class MediaWidget(BaseWidget):
             # We need to clear any inline styles: setStyleSheet("")
             # Related to https://github.com/amnweb/yasb/issues/481
             if self._play_label is not None:
-                self._play_label.setText(play_icon)
+                self.set_icon(self._play_label, play_icon, size=34)
                 self._play_label.setProperty("class", f"btn play {'disabled' if not is_play_enabled else ''}")
                 self._play_label.setCursor(
                     Qt.CursorShape.PointingHandCursor if is_play_enabled else Qt.CursorShape.ArrowCursor
@@ -1082,14 +1082,26 @@ class MediaWidget(BaseWidget):
             return text
 
     def _create_media_button(self, icon: str, action: Callable[..., Any]):
-        if not self.config.controls_hide:
-            label = ClickableLabel(self)
-            label.setProperty("class", "btn disabled")
-            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            label.setText(icon)
-            label.data = action
-            self._widget_container_layout.addWidget(label)
-            return label
+        if self.config.controls_hide:
+            return None
+    
+        label = ClickableLabel(self)
+    
+        size = 22  
+    
+        label.setFixedSize(size + 8, size + 8)
+        label.setMinimumSize(size + 8, size + 8)
+    
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        label.setProperty("class", "btn disabled")
+    
+        self.set_icon(label, icon, size=size)
+    
+        label.data = action
+    
+        self._widget_container_layout.addWidget(label)
+    
+        return label
 
     def _create_media_buttons(self):
         return (
